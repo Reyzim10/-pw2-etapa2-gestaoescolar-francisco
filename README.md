@@ -10,6 +10,8 @@ npm start
 
 O servidor inicia em `http://localhost:3000`. Para escolher outra porta, defina a variável de ambiente `PORT`.
 
+Ao abrir `http://localhost:3000`, você pode cadastrar alunos e turmas. Para acessar a API diretamente, use `/api/alunos` e `/api/turmas`.
+
 ## Recursos
 
 Todas as respostas usam JSON, exceto exclusões bem-sucedidas, que retornam `204 No Content`.

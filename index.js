@@ -1,5 +1,5 @@
 import express from 'express';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import alunosRoutes from './routes/alunosRoutes.js';
 import turmasRoutes from './routes/turmasRoutes.js';
@@ -7,6 +7,11 @@ import turmasRoutes from './routes/turmasRoutes.js';
 const app = express();
 
 app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.sendFile(resolve(dirname(fileURLToPath(import.meta.url)), 'public', 'index.html'));
+});
+
 app.use('/api/alunos', alunosRoutes);
 app.use('/api/turmas', turmasRoutes);
 

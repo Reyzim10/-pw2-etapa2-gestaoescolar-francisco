@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gestão escolar</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Arial, sans-serif;
+      color: #172554;
+      background: #f1f5f9;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+    }
+
+    .intro {
+      margin: 0 0 28px;
+      color: #475569;
+    }
+
+    .forms {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+      gap: 20px;
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
+      padding: 24px;
+      border: 1px solid #dbe3ee;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 4px 14px #0f172a0a;
+    }
+
+    h2 {
+      margin: 0 0 4px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    input,
+    select,
+    button {
+      min-height: 42px;
+      padding: 9px 11px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      background: #1d4ed8;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1e40af;
+    }
+
+    .status {
+      min-height: 20px;
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .status[data-state="success"] {
+      color: #15803d;
+    }
+
+    .status[data-state="error"] {
+      color: #b91c1c;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Gestão escolar</h1>
+    <p class="intro">Cadastre alunos e turmas pelos formulários abaixo.</p>
+
+    <section class="forms" aria-label="Formulários de cadastro">
+      <form id="form-aluno">
+        <h2>Cadastrar aluno</h2>
+        <label>
+          Nome
+          <input name="nome" autocomplete="name" required>
+        </label>
+        <label>
+          E-mail
+          <input name="email" type="email" autocomplete="email" required>
+        </label>
+        <label>
+          Data de nascimento
+          <input name="dataNascimento" type="date">
+        </label>
+        <label>
+          Turma (opcional)
+          <select name="turmaId" id="turma-aluno">
+            <option value="">Sem turma</option>
+          </select>
+        </label>
+        <button type="submit">Cadastrar aluno</button>
+        <p class="status" id="status-aluno" role="status" aria-live="polite"></p>
+      </form>
+
+      <form id="form-turma">
+        <h2>Cadastrar turma</h2>
+        <label>
+          Nome
+          <input name="nome" required>
+        </label>
+        <label>
+          Ano
+          <input name="ano" type="number" min="2000" max="2100" value="2026" required>
+        </label>
+        <label>
+          Turno
+          <select name="turno" required>
+            <option value="matutino">Matutino</option>
+            <option value="vespertino">Vespertino</option>
+            <option value="noturno">Noturno</option>
+          </select>
+        </label>
+        <button type="submit">Cadastrar turma</button>
+        <p class="status" id="status-turma" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const formAluno = document.querySelector('#form-aluno');
+    const formTurma = document.querySelector('#form-turma');
+    const seletorTurma = document.querySelector('#turma-aluno');
+
+    async function enviarFormulario(formulario, rota, statusId, prepararDados) {
+      const status = document.querySelector(statusId);
+      const dados = prepararDados(new FormData(formulario));
+      status.textContent = 'Enviando...';
+      status.dataset.state = '';
+
+      try {
+        const resposta = await fetch(rota, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados),
+        });
+        const resultado = resposta.status === 204 ? null : await resposta.json();
+        if (!resposta.ok) {
+          throw new Error(resultado?.erro || 'Não foi possível concluir o cadastro.');
+        }
+
+        status.textContent = `Cadastro realizado com sucesso. ID: ${resultado.id}.`;
+        status.dataset.state = 'success';
+        formulario.reset();
+        return resultado;
+      } catch (erro) {
+        status.textContent = erro.message || 'Não foi possível conectar à API.';
+        status.dataset.state = 'error';
+        return null;
+      }
+    }
+
+    async function carregarTurmas() {
+      const resposta = await fetch('/api/turmas');
+      if (!resposta.ok) {
+        throw new Error('Não foi possível carregar as turmas.');
+      }
+
+      const turmas = await resposta.json();
+      seletorTurma.replaceChildren(new Option('Sem turma', ''));
+      for (const turma of turmas) {
+        seletorTurma.add(new Option(`${turma.nome} (${turma.turno}, ${turma.ano})`, turma.id));
+      }
+    }
+
+    formAluno.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      const aluno = await enviarFormulario(formAluno, '/api/alunos', '#status-aluno', (campos) => ({
+        nome: campos.get('nome').trim(),
+        email: campos.get('email').trim(),
+        dataNascimento: campos.get('dataNascimento') || null,
+        turmaId: campos.get('turmaId') || null,
+      }));
+      if (aluno) {
+        await carregarTurmas();
+      }
+    });
+
+    formTurma.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      const turma = await enviarFormulario(formTurma, '/api/turmas', '#status-turma', (campos) => ({
+        nome: campos.get('nome').trim(),
+        ano: Number(campos.get('ano')),
+        turno: campos.get('turno'),
+      }));
+      if (turma) {
+        await carregarTurmas();
+      }
+    });
+
+    carregarTurmas().catch((erro) => {
+      const status = document.querySelector('#status-aluno');
+      status.textContent = erro.message;
+      status.dataset.state = 'error';
+    });
+  </script>
+</body>
+</html>
