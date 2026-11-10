@@ -4,6 +4,7 @@ import turmasController from '../controllers/turmasController.js';
 const router = Router();
 
 router.get('/', turmasController.listar);
+router.get('/:id/alunos', turmasController.listarAlunos);
 router.get('/:id', turmasController.buscarPorId);
 router.post('/', turmasController.criar);
 router.put('/:id', turmasController.atualizar);

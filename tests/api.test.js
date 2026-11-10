@@ -23,7 +23,7 @@ async function requisitar(caminho, metodo = 'GET', body) {
     headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const dados = resposta.status === 204 ? null : await resposta.json();
+  const dados = await resposta.json();
   return { status: resposta.status, dados };
 }
 
@@ -65,16 +65,33 @@ test('carrega dados iniciais e filtra recursos com parâmetros validados', async
   assert.equal((await requisitar('/api/turmas?campo=valor')).status, 400);
 });
 
+test('disponibiliza as rotas solicitadas sem o prefixo /api e lista alunos por turma', async () => {
+  const alunos = await requisitar('/alunos');
+  const turmas = await requisitar('/turmas');
+  assert.equal(alunos.status, 200);
+  assert.equal(turmas.status, 200);
+  assert.ok(alunos.dados.length >= 2);
+  assert.ok(turmas.dados.length >= 2);
+
+  const turmaId = turmas.dados[0].id;
+  const alunosDaTurma = await requisitar(`/turmas/${turmaId}/alunos`);
+  assert.equal(alunosDaTurma.status, 200);
+  assert.ok(alunosDaTurma.dados.length > 0);
+  assert.ok(alunosDaTurma.dados.every((aluno) => aluno.turmaId === turmaId));
+  assert.equal((await requisitar('/turmas/9999/alunos')).status, 404);
+  assert.equal((await requisitar('/turmas/invalido/alunos')).status, 400);
+});
+
 test('gerencia turmas e alunos e protege os vínculos entre eles', async () => {
-  const turmaCriada = await requisitar('/api/turmas', 'POST', {
+  const turmaCriada = await requisitar('/turmas', 'POST', {
     nome: '7º Ano A',
     ano: 2026,
     turno: 'matutino',
   });
   assert.equal(turmaCriada.status, 201);
-  assert.equal((await requisitar(`/api/turmas/${turmaCriada.dados.id}`)).dados.id, turmaCriada.dados.id);
+  assert.equal((await requisitar(`/turmas/${turmaCriada.dados.id}`)).dados.id, turmaCriada.dados.id);
 
-  const alunoCriado = await requisitar('/api/alunos', 'POST', {
+  const alunoCriado = await requisitar('/alunos', 'POST', {
     nome: 'Ana Souza',
     email: 'ana@example.com',
     dataNascimento: '2010-05-12',
@@ -82,25 +99,29 @@ test('gerencia turmas e alunos e protege os vínculos entre eles', async () => {
   });
   assert.equal(alunoCriado.status, 201);
   assert.equal(alunoCriado.dados.turmaId, turmaCriada.dados.id);
-  assert.equal((await requisitar(`/api/alunos/${alunoCriado.dados.id}`)).dados.id, alunoCriado.dados.id);
+  assert.equal((await requisitar(`/alunos/${alunoCriado.dados.id}`)).dados.id, alunoCriado.dados.id);
 
-  assert.equal((await requisitar(`/api/turmas/${turmaCriada.dados.id}`, 'DELETE')).status, 409);
-  assert.equal((await requisitar(`/api/alunos/${alunoCriado.dados.id}`, 'PUT', {
+  assert.equal((await requisitar(`/turmas/${turmaCriada.dados.id}`, 'DELETE')).status, 400);
+  assert.equal((await requisitar(`/alunos/${alunoCriado.dados.id}`, 'PUT', {
     nome: 'Ana Souza',
     email: 'ana-nova@example.com',
     dataNascimento: '2010-05-12',
     turmaId: turmaCriada.dados.id,
   })).dados.email, 'ana-nova@example.com');
-  assert.equal((await requisitar(`/api/alunos/${alunoCriado.dados.id}`, 'PATCH', { nome: 'Ana Silva' })).dados.nome, 'Ana Silva');
-  assert.equal((await requisitar(`/api/alunos/${alunoCriado.dados.id}`, 'DELETE')).status, 204);
-  assert.equal((await requisitar(`/api/turmas/${turmaCriada.dados.id}`, 'PUT', {
+  assert.equal((await requisitar(`/alunos/${alunoCriado.dados.id}`, 'PATCH', { nome: 'Ana Silva' })).dados.nome, 'Ana Silva');
+  const alunoExcluido = await requisitar(`/alunos/${alunoCriado.dados.id}`, 'DELETE');
+  assert.equal(alunoExcluido.status, 200);
+  assert.equal(alunoExcluido.dados.mensagem, 'Aluno excluído com sucesso.');
+  assert.equal((await requisitar(`/turmas/${turmaCriada.dados.id}`, 'PUT', {
     nome: '8º Ano A',
     ano: 2027,
     turno: 'vespertino',
   })).dados.nome, '8º Ano A');
-  assert.equal((await requisitar(`/api/turmas/${turmaCriada.dados.id}`, 'PATCH', { turno: 'noturno' })).dados.turno, 'noturno');
-  assert.equal((await requisitar(`/api/turmas/${turmaCriada.dados.id}`, 'DELETE')).status, 204);
-  assert.equal((await requisitar('/api/alunos', 'POST', {
+  assert.equal((await requisitar(`/turmas/${turmaCriada.dados.id}`, 'PATCH', { turno: 'noturno' })).dados.turno, 'noturno');
+  const turmaExcluida = await requisitar(`/turmas/${turmaCriada.dados.id}`, 'DELETE');
+  assert.equal(turmaExcluida.status, 200);
+  assert.equal(turmaExcluida.dados.mensagem, 'Turma excluída com sucesso.');
+  assert.equal((await requisitar('/alunos', 'POST', {
     nome: 'João',
     email: 'joao@example.com',
     turmaId: 99,

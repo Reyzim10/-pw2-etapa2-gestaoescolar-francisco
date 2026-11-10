@@ -126,7 +126,7 @@ function excluir(req, res) {
   if (!alunoModel.excluir(id)) {
     return res.status(404).json({ erro: 'Aluno não encontrado.' });
   }
-  return res.status(204).end();
+  return res.status(200).json({ mensagem: 'Aluno excluído com sucesso.' });
 }
 
 export default { listar, buscarPorId, criar, atualizar, excluir };

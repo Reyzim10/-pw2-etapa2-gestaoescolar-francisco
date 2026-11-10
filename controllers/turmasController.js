@@ -69,6 +69,19 @@ function buscarPorId(req, res) {
   return res.json(turma);
 }
 
+function listarAlunos(req, res) {
+  const id = obterId(req.params.id);
+  if (!id) {
+    return res.status(400).json({ erro: 'O identificador da turma deve ser um inteiro positivo.' });
+  }
+
+  if (!turmaModel.buscarPorId(id)) {
+    return res.status(404).json({ erro: 'Turma não encontrada.' });
+  }
+
+  return res.json(alunoModel.listar().filter((aluno) => aluno.turmaId === id));
+}
+
 function criar(req, res) {
   const validacao = validarDados(req.body);
   if (validacao.erro) {
@@ -107,10 +120,10 @@ function excluir(req, res) {
     return res.status(404).json({ erro: 'Turma não encontrada.' });
   }
   if (alunoModel.existeNaTurma(id)) {
-    return res.status(409).json({ erro: 'Não é possível excluir uma turma que possui alunos vinculados.' });
+    return res.status(400).json({ erro: 'Não é possível excluir uma turma que possui alunos vinculados.' });
   }
   turmaModel.excluir(id);
-  return res.status(204).end();
+  return res.status(200).json({ mensagem: 'Turma excluída com sucesso.' });
 }
 
-export default { listar, buscarPorId, criar, atualizar, excluir };
+export default { listar, buscarPorId, listarAlunos, criar, atualizar, excluir };
