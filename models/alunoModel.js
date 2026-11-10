@@ -1,5 +1,9 @@
-const alunos = new Map();
-let proximoId = 1;
+const dadosIniciais = [
+  { id: 1, nome: 'Ana Souza', email: 'ana@example.com', dataNascimento: '2010-05-12', turmaId: 1 },
+  { id: 2, nome: 'Bruno Lima', email: 'bruno@example.com', dataNascimento: '2011-09-23', turmaId: 2 },
+];
+const alunos = new Map(dadosIniciais.map((aluno) => [aluno.id, { ...aluno }]));
+let proximoId = Math.max(...alunos.keys()) + 1;
 
 function listar() {
   return [...alunos.values()];

@@ -1,5 +1,9 @@
-const turmas = new Map();
-let proximoId = 1;
+const dadosIniciais = [
+  { id: 1, nome: '8º Ano A', ano: 2026, turno: 'matutino' },
+  { id: 2, nome: '9º Ano B', ano: 2026, turno: 'vespertino' },
+];
+const turmas = new Map(dadosIniciais.map((turma) => [turma.id, { ...turma }]));
+let proximoId = Math.max(...turmas.keys()) + 1;
 
 function listar() {
   return [...turmas.values()];

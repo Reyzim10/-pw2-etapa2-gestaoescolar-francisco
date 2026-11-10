@@ -1,5 +1,6 @@
 import alunoModel from '../models/alunoModel.js';
 import turmaModel from '../models/turmaModel.js';
+import { filtrarRegistros, validarFiltros } from '../helpers/filtros.js';
 
 function obterId(valor) {
   const id = Number(valor);
@@ -64,7 +65,15 @@ function validarDados(body, atual = {}, parcial = false) {
 }
 
 function listar(req, res) {
-  return res.json(alunoModel.listar());
+  const validacao = validarFiltros(req.query, {
+    nome: { tipo: 'texto' },
+    email: { tipo: 'texto' },
+    turmaId: { tipo: 'inteiro', min: 1 },
+  });
+  if (validacao.erro) {
+    return res.status(400).json({ erro: validacao.erro });
+  }
+  return res.json(filtrarRegistros(alunoModel.listar(), validacao.filtros));
 }
 
 function buscarPorId(req, res) {
@@ -85,7 +94,9 @@ function criar(req, res) {
   if (validacao.erro) {
     return res.status(400).json({ erro: validacao.erro });
   }
-  return res.status(201).json(alunoModel.criar(validacao.dados));
+  const aluno = alunoModel.criar(validacao.dados);
+  console.info(`[CADASTRO] Aluno: ${JSON.stringify(aluno)}`);
+  return res.status(201).json(aluno);
 }
 
 function atualizar(req, res) {
